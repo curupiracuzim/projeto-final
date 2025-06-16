@@ -15,27 +15,27 @@ typedef struct {
     int topo;
 } Torre;
 
-// Registro de histórico
+// Registro de Jogo
 typedef struct {
     char jogador[50];
     int discos;
     int movimentos;
     char data[20];
-} HistRegistro;
+    char status[20];
+} RegistroJogo;
 
-// Nó da lista de histórico
-typedef struct NoHist {
-    HistRegistro reg;
-    struct NoHist* prox;
-} NoHist;
+// Nó do Histórico
+typedef struct NoHistorico {
+    RegistroJogo registro_jogo;
+    struct NoHistorico* prox;
+} NoHistorico;
 
-// Histórico
+// Gerenciador de Histórico
 typedef struct {
-    NoHist* inicio;
+    NoHistorico* inicio;
     char arquivo[50];
-} Historico;
+} GerenciadorHistorico;
 
-// Disco
 Disco* criar_disco(int tam) {
     Disco* d = (Disco*)malloc(sizeof(Disco));
     if (!d) {
@@ -46,7 +46,6 @@ Disco* criar_disco(int tam) {
     return d;
 }
 
-// Torre
 void init_torre(Torre* t, char nome) {
     t->nome = nome;
     t->topo = -1;
@@ -72,7 +71,7 @@ Disco* pop_disco(Torre* t) {
     }
     return t->pilha[t->topo--];
 }
-// Exibe torres no terminal
+
 void mostrar_torres(Torre torres[], int n_discos) {
     printf("\n");
     int largura_max = n_discos * 2 - 1;
@@ -114,80 +113,93 @@ void mostrar_torres(Torre torres[], int n_discos) {
     printf("\n\n");
 }
 
-// Histórico
-void init_historico(Historico* h) {
-    h->inicio = NULL;
-    strcpy(h->arquivo, "historico_hanoi.txt");
+void init_gerenciador_historico(GerenciadorHistorico* gh) {
+    gh->inicio = NULL;
+    strcpy(gh->arquivo, "historico_hanoi.txt");
 }
 
-void carregar_historico(Historico* h) {
-    FILE* f = fopen(h->arquivo, "r");
+void carregar_historico(GerenciadorHistorico* gh) {
+    FILE* f = fopen(gh->arquivo, "r");
     if (!f) return;
 
     char linha[256];
-    HistRegistro temp;
+    RegistroJogo temp;
     while (fgets(linha, sizeof(linha), f)) {
         linha[strcspn(linha, "\n")] = 0;
-        if (sscanf(linha, "%49[^;];%d;%d;%19s", temp.jogador, &temp.discos, &temp.movimentos, temp.data) == 4) {
-            NoHist* novo = (NoHist*)malloc(sizeof(NoHist));
+        if (sscanf(linha, "%49[^;];%d;%d;%19[^;];%19s", temp.jogador, &temp.discos, &temp.movimentos, temp.data, temp.status) == 5) {
+            NoHistorico* novo = (NoHistorico*)malloc(sizeof(NoHistorico));
             if (!novo) {
                 perror("Erro ao alocar histórico");
                 exit(EXIT_FAILURE);
             }
-            novo->reg = temp;
-            novo->prox = h->inicio;
-            h->inicio = novo;
+            novo->registro_jogo = temp;
+            novo->prox = gh->inicio;
+            gh->inicio = novo;
         }
     }
     fclose(f);
 }
 
-void salvar_registro(Historico* h, const char* jogador, int discos, int movimentos) {
-    NoHist* novo = (NoHist*)malloc(sizeof(NoHist));
+void salvar_registro(GerenciadorHistorico* gh, const char* jogador, int discos, int movimentos, const char* status_jogo) {
+    NoHistorico* novo = (NoHistorico*)malloc(sizeof(NoHistorico));
     if (!novo) {
         perror("Erro ao alocar nó");
         exit(EXIT_FAILURE);
     }
 
-    strcpy(novo->reg.jogador, jogador);
-    novo->reg.discos = discos;
-    novo->reg.movimentos = movimentos;
+    strcpy(novo->registro_jogo.jogador, jogador);
+    novo->registro_jogo.discos = discos;
+    novo->registro_jogo.movimentos = movimentos;
+    strcpy(novo->registro_jogo.status, status_jogo);
 
-    time_t timer;
-    struct tm* info;
-    time(&timer);
-    info = localtime(&timer);
-    strftime(novo->reg.data, 20, "%Y-%m-%d %H:%M:%S", info);
+    time_t tempo_atual;
+    struct tm* info_tempo;
+    time(&tempo_atual);
+    info_tempo = localtime(&tempo_atual);
+    strftime(novo->registro_jogo.data, 20, "%Y-%m-%d %H:%M:%S", info_tempo);
 
-    novo->prox = h->inicio;
-    h->inicio = novo;
+    novo->prox = gh->inicio;
+    gh->inicio = novo;
 
-    FILE* f = fopen(h->arquivo, "a");
-    if (!f) {
+    FILE* arquivo_historico = fopen(gh->arquivo, "a");
+    if (!arquivo_historico) {
         perror("Erro ao salvar histórico");
         return;
     }
-    fprintf(f, "%s;%d;%d;%s\n", jogador, discos, movimentos, novo->reg.data);
-    fclose(f);
+    fprintf(arquivo_historico, "%s;%d;%d;%s;%s\n", jogador, discos, movimentos, novo->registro_jogo.data, novo->registro_jogo.status);
+    fclose(arquivo_historico);
 }
 
-void mostrar_historico(Historico* h) {
-    if (!h->inicio) {
+void mostrar_historico(GerenciadorHistorico* gh) {
+    if (!gh->inicio) {
         printf("Histórico vazio.\n");
         return;
     }
-    NoHist* atual = h->inicio;
-    int i = 1;
+    // Exibir do mais antigo para o mais recente
+    int count = 0;
+    NoHistorico* atual = gh->inicio;
     while (atual) {
-        printf("--- Registro %d ---\n", i++);
-        printf("Jogador: %s\n", atual->reg.jogador);
-        printf("Discos: %d\n", atual->reg.discos);
-        printf("Movimentos: %d\n", atual->reg.movimentos);
-        printf("Data: %s\n", atual->reg.data);
-        printf("------------------\n");
+        count++;
         atual = atual->prox;
     }
+    NoHistorico** vetor = (NoHistorico**)malloc(count * sizeof(NoHistorico*));
+    atual = gh->inicio;
+    for (int i = count - 1; i >= 0; i--) {
+        vetor[i] = atual;
+        atual = atual->prox;
+    }
+    for (int i = 0; i < count; i++) {
+        printf("--- Registro %d ---\n", i + 1);
+        printf("Jogador: %s\n", vetor[i]->registro_jogo.jogador);
+        printf("Discos: %d\n", vetor[i]->registro_jogo.discos);
+        printf("Movimentos: %d\n", vetor[i]->registro_jogo.movimentos);
+        printf("Data: %s\n", vetor[i]->registro_jogo.data);
+        printf("Status: %s\n", vetor[i]->registro_jogo.status);
+        printf("------------------\n");
+    }
+    free(vetor);
 }
+
 void mover_disco(Torre torres[], int origem, int destino) {
     if (torres[origem].topo < 0) {
         printf("Origem vazia.\n");
@@ -207,79 +219,120 @@ int venceu(Torre torres[], int n_discos) {
     return torres[2].topo == n_discos - 1;
 }
 
+// Função para limpar o buffer do teclado
+void limpar_buffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
 int main() {
-    int n_discos;
-    char jogador[50];
-    Historico historico;
-    init_historico(&historico);
-    carregar_historico(&historico);
+    int numero_discos;
+    char nome_jogador[50];
+    GerenciadorHistorico gerenciador_historico;
+    init_gerenciador_historico(&gerenciador_historico);
+    carregar_historico(&gerenciador_historico);
 
     printf("=== Torre de Hanói ===\n");
     printf("Nome do jogador: ");
-    fgets(jogador, sizeof(jogador), stdin);
-    jogador[strcspn(jogador, "\n")] = 0;
+    if (!fgets(nome_jogador, sizeof(nome_jogador), stdin)) {
+        printf("Erro ao ler nome.\n");
+        return 1;
+    }
+    nome_jogador[strcspn(nome_jogador, "\n")] = 0;
 
     printf("Quantidade de discos (3 a 8): ");
-    scanf("%d", &n_discos);
-    while (n_discos < 3 || n_discos > 8) {
+    while (scanf("%d", &numero_discos) != 1 || numero_discos < 3 || numero_discos > 8) {
         printf("Número inválido. Tente novamente: ");
-        scanf("%d", &n_discos);
+        limpar_buffer();
     }
+    limpar_buffer();
 
-    Torre torres[3];
-    char nomes[] = {'A', 'B', 'C'};
+    Torre torres_jogo[3];
+    char nomes_torres[] = {'A', 'B', 'C'};
     for (int i = 0; i < 3; i++) {
-        torres[i].nome = nomes[i];
-        torres[i].topo = -1;
+        torres_jogo[i].nome = nomes_torres[i];
+        torres_jogo[i].topo = -1;
     }
 
-    for (int i = n_discos; i > 0; i--) {
-        Disco* d = (Disco*)malloc(sizeof(Disco));
-        d->tam = i;
-        torres[0].pilha[++torres[0].topo] = d;
+    for (int i = numero_discos; i > 0; i--) {
+        Disco* novo_disco = (Disco*)malloc(sizeof(Disco));
+        novo_disco->tam = i;
+        torres_jogo[0].pilha[++torres_jogo[0].topo] = novo_disco;
     }
 
-    int origem, destino, movimentos = 0;
-    while (!venceu(torres, n_discos)) {
-        mostrar_torres(torres, n_discos);
-        printf("Movimento #%d\n", movimentos + 1);
-        printf("Origem (0=A, 1=B, 2=C): ");
-        scanf("%d", &origem);
-        printf("Destino (0=A, 1=B, 2=C): ");
-        scanf("%d", &destino);
+    int torre_origem, torre_destino, total_movimentos = 0;
+    int jogo_ativo = 1;
 
-        if (origem < 0 || origem > 2 || destino < 0 || destino > 2) {
+    while (jogo_ativo && !venceu(torres_jogo, numero_discos)) {
+        mostrar_torres(torres_jogo, numero_discos);
+        printf("Movimento #%d\n", total_movimentos + 1);
+        printf("Origem (0=A, 1=B, 2=C, -1 para sair): ");
+        if (scanf("%d", &torre_origem) != 1) {
             printf("Entrada inválida.\n");
+            limpar_buffer();
+            continue;
+        }
+        limpar_buffer();
+
+        if (torre_origem == -1) {
+            jogo_ativo = 0;
+            break;
+        }
+
+        printf("Destino (0=A, 1=B, 2=C): ");
+        if (scanf("%d", &torre_destino) != 1) {
+            printf("Entrada inválida.\n");
+            limpar_buffer();
+            continue;
+        }
+        limpar_buffer();
+
+        if (torre_origem < 0 || torre_origem > 2 || torre_destino < 0 || torre_destino > 2) {
+            printf("Entrada inválida. Por favor, insira um número entre 0 e 2 para origem e destino.\n");
             continue;
         }
 
-        mover_disco(torres, origem, destino);
-        movimentos++;
+        Disco* disco_movido = pop_disco(&torres_jogo[torre_origem]);
+        if (disco_movido == NULL) {
+            printf("Torre de origem vazia. Escolha outra torre.\n");
+            continue;
+        }
+        if (!push_disco(&torres_jogo[torre_destino], disco_movido)) {
+            push_disco(&torres_jogo[torre_origem], disco_movido);
+            continue;
+        }
+        total_movimentos++;
     }
 
-    mostrar_torres(torres, n_discos);
-    printf("Parabéns, %s! Você venceu em %d movimentos.\n", jogador, movimentos);
-    salvar_registro(&historico, jogador, n_discos, movimentos);
+    if (venceu(torres_jogo, numero_discos)) {
+        mostrar_torres(torres_jogo, numero_discos);
+        printf("Parabéns, %s! Você venceu em %d movimentos.\n", nome_jogador, total_movimentos);
+        salvar_registro(&gerenciador_historico, nome_jogador, numero_discos, total_movimentos, "Venceu");
+    } else {
+        printf("\nVocê abandonou o jogo.\n");
+        salvar_registro(&gerenciador_historico, nome_jogador, numero_discos, total_movimentos, "Abandonou");
+    }
 
     printf("\nDeseja ver o histórico? (s/n): ");
-    char opcao;
-    scanf(" %c", &opcao);
-    if (opcao == 's' || opcao == 'S') {
-        mostrar_historico(&historico);
+    char opcao_historico;
+    if (scanf(" %c", &opcao_historico) == 1 && (opcao_historico == 's' || opcao_historico == 'S')) {
+        limpar_buffer();
+        mostrar_historico(&gerenciador_historico);
+    } else {
+        limpar_buffer();
     }
 
-    // Liberar memória
     for (int i = 0; i < 3; i++) {
-        while (torres[i].topo >= 0) {
-            free(torres[i].pilha[torres[i].topo--]);
+        while (torres_jogo[i].topo >= 0) {
+            free(torres_jogo[i].pilha[torres_jogo[i].topo--]);
         }
     }
 
-    NoHist* atual = historico.inicio;
-    while (atual) {
-        NoHist* temp = atual;
-        atual = atual->prox;
-        free(temp);
+    NoHistorico* atual_historico = gerenciador_historico.inicio;
+    while (atual_historico) {
+        NoHistorico* temp_historico = atual_historico;
+        atual_historico = atual_historico->prox;
+        free(temp_historico);
     }
 
     return 0;
