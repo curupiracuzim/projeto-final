@@ -1,3 +1,4 @@
+
 # Torre de Hanói - Jogo em C
 
 Este projeto é uma implementação do clássico jogo **Torre de Hanói** em linguagem C, jogado via terminal. O jogo permite ao usuário escolher o número de discos, realizar movimentos entre as torres e salva o histórico das partidas em um arquivo.
@@ -36,3 +37,9 @@ Desenvolvido por gabriel alberto duarte de andrade.
 
 ---
 Divirta-se jogando Torre de Hanói professor robson!
+=======
+depois de uma semana tentando commitar em varios computadores eu consegui passar uma parte somente no dia 15, caso tenha alguma alteração hoje, postarei aqui no read me, pois esse computaador não tem permissão primaria para usar tanto ubuntu como instalar aplicações, e o meu notebook tá com algum problema no json que não consegui resolver direito
+
+dia 16, não consegui executar em nenhum programa pois o arquivo não cria o .exe, instalei muita coisa e desinstalei tambem porem não rodad de jeito nenhum, porem em compiladores online ele roda e salva o hsitorico, "salva" porem não fica possivel vê quem ja jogou por conta disso, pode ser erro das maquinas que tentei usar porem nenhuma das 3 consegui rodar, fiz de tudo, atualizei desinssalei, usei vs, dev.
+fiz algumas alterações no codigo, ele ainda roda tranquilamente online, e não aponta nenhum erro
+
