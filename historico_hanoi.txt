@@ -1,0 +1,5 @@
+GABRIEL ;3;8;2025-06-16 18:17:08;Venceu
+
+esse é um das jogadas que consegui salvar usando um compilador online pois como dito no read.me o 
+vs não ta conseguindo executar, desisti de tentar instalar coisas pois perdi muitos arquivos tentando
+corrijir isso, espero que entenda, o historico está funcionando normalmente e perfeitamente
